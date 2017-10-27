@@ -1,0 +1,24 @@
+<package>
+
+	<description brief="Components for 3D-SLAM">
+		Orogen components using the slam3d library.
+	</description>
+	<author>Sebastian Kasperski/sebastian.kasperski@dfki.de</author>
+	<license></license>
+	<url>http://</url>
+	<logo>http://</logo>
+	
+	<depend package="slam/slam3d" />
+	<depend package="slam/orogen/envire" />
+	<depend package="drivers/velodyne_lidar" />
+	<depend package="drivers/orogen/transformer" />
+	<depend package="base/cmake" />
+	<depend package="base/orogen/types" />
+	<depend package="base/logging" />
+	<depend package="tools/orocos.rb" />
+	<depend package="gui/vizkit" />
+	<depend package="slam/octomap" />
+	
+	<tags>stable</tags>
+	
+</package>
