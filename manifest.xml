@@ -1,24 +1,34 @@
 <package>
 
-	<description brief="Components for 3D-SLAM">
-		Orogen components using the slam3d library.
-	</description>
-	<author>Sebastian Kasperski/sebastian.kasperski@dfki.de</author>
-	<license></license>
-	<url>http://</url>
-	<logo>http://</logo>
-	
-	<depend package="slam/slam3d" />
-	<depend package="slam/orogen/envire" />
-	<depend package="drivers/velodyne_lidar" />
-	<depend package="drivers/orogen/transformer" />
-	<depend package="base/cmake" />
-	<depend package="base/orogen/types" />
-	<depend package="base/logging" />
-	<depend package="tools/orocos.rb" />
-	<depend package="gui/vizkit" />
-	<depend package="slam/octomap" />
-	
-	<tags>stable</tags>
+  <description brief="Components for 3D-SLAM">
+    Orogen components using the slam3d library.
+  </description>
+  <author>Sebastian Kasperski/sebastian.kasperski@dfki.de</author>
+  <maintainer>Sebastian Kasperski/sebastian.kasperski@dfki.de</maintainer>
+  <license>New BSD</license>
+
+  <depend package="slam/slam3d" />
+  <depend package="slam/orogen/envire" />
+  <depend package="drivers/orogen/transformer" />
+  <depend package="base/cmake" />
+  <depend package="base/orogen/types" />
+  <depend package="base/logging" />
+  <depend package="tools/orocos.rb" />
+  <depend package="gui/vizkit" />
+
+  <keywords>
+    <keyword>slam</keyword>
+    <keyword>mapping</keyword>
+    <keyword>graph</keyword>
+  </keywords>
+ 
+  <stage>1</stage>
+  <use>multi project</use>
+  <activity>active</activity>
+
+  <tag>c++</tag>
+  <tag>rock</tag>
+  <tag>orogen</tag>
+  <tag>stable</tag>
 	
 </package>
