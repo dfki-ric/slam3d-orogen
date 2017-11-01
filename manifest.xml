@@ -26,9 +26,12 @@
   <use>multi project</use>
   <activity>active</activity>
 
-  <tag>c++</tag>
-  <tag>rock</tag>
-  <tag>orogen</tag>
+  <classifiers>
+    <classifier>c++</classifier>
+    <classifier>rock</classifier>
+    <classifier>orogen</classifier>
+  </classifiers>
+
   <tag>stable</tag>
 	
 </package>
