@@ -1,7 +1,6 @@
 # Generated from orogen/lib/orogen/templates/tasks/CMakeLists.txt
 
 find_package(PCL 1.7 REQUIRED COMPONENTS io)
-add_definitions(-DPCL_WITH_VIEWPOINT)
 
 pkg_check_modules(PCL_MY_IO pcl_io-${PCL_VERSION_MAJOR}.${PCL_VERSION_MINOR})
 

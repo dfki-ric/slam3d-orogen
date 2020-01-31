@@ -1,13 +1,19 @@
 name "slam3d"
 
+using_library 'velodyne_lidar'
 using_library 'slam3d'
 using_library 'transformer'
-using_library 'envire'
+using_library 'octomap'
+using_library 'maps'
+using_library 'envire_maps'
 
 import_types_from 'base'
-import_types_from 'slam3d/GICPConfiguration.hpp'
-import_types_from 'envire'
-import_types_from 'envire/maps/MLSConfiguration.hpp'
+import_types_from 'envire_maps'
+import_types_from 'pcl'
+import_types_from 'velodyne_lidar/MultilevelLaserScan.h'
+import_types_from 'slam3d/sensor/pcl/RegistrationParameters.hpp'
+import_types_from 'maps/grid/MLSConfig.hpp'
+import_types_from 'OctoMapConfiguration.hpp'
 import_types_from 'GridConfiguration.hpp'
 
 ## Mapper using Pointclouds
@@ -16,7 +22,7 @@ task_context "PointcloudMapper" do
 
 	input_port 'scan', '/base/samples/Pointcloud'
 	output_port 'cloud', '/base/samples/Pointcloud'
-	output_port 'envire_map', ro_ptr('std/vector</envire/BinaryEvent>')
+	output_port 'mls', spatio_temporal('/maps/grid/MLSMapKalman')
 	output_port 'robot2map', 'base/samples/RigidBodyState'
 	output_port 'odometry2map', 'base/samples/RigidBodyState'
 
@@ -75,6 +81,10 @@ task_context "PointcloudMapper" do
 	property('map_publish_rate', '/int', 0)
 	.dynamic()
 	.doc("Publish Map-Pointcloud every X scans, that are added to the map.")
+
+	property('map_update_rate', '/int', 0)
+	.dynamic()
+	.doc("Add every X'th scan to the grid-map, even if it is not added to the graph.")
 
 	property('neighbor_radius', '/double', 1.0)
 	.doc("A new node is linked against neighbors within this radius, but not
@@ -141,13 +151,13 @@ task_context "PointcloudMapper" do
 	when the odometry includes global heading from a compass and will then
 	preserve this heading in the generated map, e.g. the map will be north aligned.")
 
-	property('gicp_config', '/slam3d/GICPConfiguration')
+	property('gicp_config', '/slam3d/RegistrationParameters')
 	.doc("Parameters for Generalized ICP. This set is used for sequential scan
 	matching and should be quite robust, e.g. fail rarely. A quite good guess
 	for the transformation from odometry can be assumed. Scans might have only
 	little overlap depending on the environment.")
 
-	property('gicp_coarse_config', '/slam3d/GICPConfiguration')
+	property('gicp_coarse_config', '/slam3d/RegistrationParameters')
 	.doc("Parameters for coarse Generalized ICP. This is performed first to verify
 	a possible loop closure. It should operate on lower density clouds to increase
 	the convergence radius and speedup computation. Maximum feature distance should
@@ -173,16 +183,10 @@ task_context "PointcloudMapper" do
 	property('map_frame', '/std/string', "map")
 	.doc("The frame that the map is represented in.")
 
-	property('use_colors_as_viewpoints', '/bool', false)
-	.doc("Whether to get viewpoints from pointcloud's color vector. This non-
-	standard behaviour should only be activated if such special pointclouds
-	are provided. If true, raytracing will be done from viewpoint for each
-	point individually.")
-
 	property('grid_config', 'slam3d/GridConfiguration')
 	.doc("Size and resolution of generated grid map.")
 
-	property('grid_mls_config', '/envire/MLSConfiguration')
+	property('grid_mls_config', '/maps/grid/MLSConfig')
 	.doc("Multi-Layer-Surface-Map specific configuration.")
 
 	property('envire_path', '/std/string', "slam3d_envire")
@@ -194,6 +198,28 @@ task_context "PointcloudMapper" do
 	of this node is implemented yet. Most importantly the usually greater
 	size of this cloud will not be taken into account when matching against
 	incoming regular scans.")
+
+	property('gravity_reference', 'base/Vector3d')
+	.doc("Direction of gravity (upward) in robot coordinates.")
+end
+
+## Mapper that creates a Multi-Level-Surface-Map from an OcTree
+task_context "OcTreeMapper" do
+	subclasses "PointcloudMapper"
+	
+	operation('remove_dynamic_objects')
+	.returns('/bool')
+	.doc("Removes points from scans that have changed in the environment.")
+	
+	property('octo_map_config', 'slam3d/OctoMapConfiguration')
+	.doc("OctoMap specific configuration.")
+end
+
+## Task to dump velodyne-Scans to KITTI-Format
+task_context "PointcloudToBinary" do
+	input_port 'pcl', '/base/samples/Pointcloud'
+	input_port 'odometry', '/base/samples/RigidBodyState'
+	periodic 0.1
 end
 
 ## Filter for pointclouds 
@@ -218,15 +244,59 @@ task_context "PointcloudFilter" do
 	.doc("Only pass every n'th scan.")
 end
 
-## Task to create Multi-Layer-Surface-Map
-task_context "MLSMapProjector" do
-	input_port 'cloud', '/base/samples/Pointcloud'
-	output_port 'envire_map', ro_ptr('std/vector</envire/BinaryEvent>')
-	port_driven 'cloud'
+## Filter to remove outliers and moving objects
+task_context "OcTreeFilter" do
+	input_port 'input', '/base/samples/Pointcloud'
+	output_port 'output', '/base/samples/Pointcloud'
+	port_driven 'input'
 
-	property('grid_config', 'slam3d/GridConfiguration')
-	.doc("Size and resolution of generated map.")
+	transformer do
+		transform "laser", "odometry"
+		align_port 'input'
+		max_latency 0.5
+	end
 
-	property('mls_config', '/envire/MLSConfiguration')
-	.doc("Multi-Layer-Surface-Map specific configuration.")
+	property('log_type', '/int', 0)
+	.doc("Standard(0), Base(1), File(2)")
+
+	property('log_level', '/int', 2)
+	.dynamic()
+	.doc("Debug(0), Info(1), Warn(2), Error(3), Fatal(4)")
+
+	property('min_height', '/double', -1)
+	.doc("Remove all points below this height.")
+
+	property('max_height', '/double', 1)
+	.doc("Remove all points above this height.")
+
+	property('min_distance', '/double', 0.5)
+	.doc("Remove all points within this radius of the sensor.")
+
+	property('max_distance', '/double', 10)
+	.doc("Remove all points beyond this radius of the sensor.")
+	
+	property('pass_rate', '/int', 1)
+	.doc("Only pass every n'th scan.")
+
+	property('octo_map_config', 'slam3d/OctoMapConfiguration')
+	.doc("OctoMap specific configuration.")
+end
+
+## Convert MultilevelLaserScan (deprecated format)
+## or a Depthmap from a velodyne scanner to Pointcloud format
+task_context "ScanConverter" do
+	error_states :MULTIPLE_INPUT_CONNECTIONS
+
+	input_port 'scan', '/velodyne_lidar/MultilevelLaserScan'
+	input_port 'depth_map', '/base/samples/DepthMap'
+	input_port 'distance_image', '/base/samples/DistanceImage'
+	output_port 'cloud', '/base/samples/Pointcloud'
+	port_driven
+end
+
+## Convert LaserScan to Pointcloud
+task_context "LineScanConverter" do
+	input_port 'scan', '/base/samples/LaserScan'
+	output_port 'cloud', '/base/samples/Pointcloud'
+	port_driven 'scan'
 end

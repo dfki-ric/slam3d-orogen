@@ -4,7 +4,7 @@
 #include <sys/time.h>
 #include <base/Pose.hpp>
 #include <base/Time.hpp>
-#include <slam3d/Sensor.hpp>
+#include <slam3d/core/Types.hpp>
 
 namespace slam3d
 {

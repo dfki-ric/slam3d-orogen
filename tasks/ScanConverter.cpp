@@ -47,9 +47,13 @@ void ScanConverter::updateHook()
 {
 	ScanConverterBase::updateHook();
 
-	if(_scan.connected() && _depth_map.connected())
+	int con = 0;
+	if(_scan.connected()) con++;
+	if(_depth_map.connected()) con++;
+	if(_distance_image.connected()) con++;
+	if(con > 1)
 	{
-		LOG_ERROR("ScanConverter allows a connection to either scan or depth_map port");
+		LOG_ERROR("ScanConverter allows only one input connection!");
 		state(MULTIPLE_INPUT_CONNECTIONS);
 	}
 
@@ -75,6 +79,12 @@ void ScanConverter::updateHook()
 		depthMap.convertDepthMapToPointCloud(cloud.points, true);
 		cloud.time = depthMap.time;
 		_cloud.write(cloud);
+	}
+	
+	base::samples::DistanceImage distanceImage;
+	while(_distance_image.read(distanceImage, false) == RTT::NewData)
+	{
+		_cloud.write(distanceImage.getPointCloud());
 	}
 }
 

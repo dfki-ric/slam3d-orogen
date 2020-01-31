@@ -2,12 +2,11 @@
 #define SLAM3D_POINTCLOUDMAPPER_TASK_HPP
 
 #include <slam3d/PointcloudMapperBase.hpp>
-#include <slam3d/GraphMapper.hpp>
-#include <slam3d/PointCloudSensor.hpp>
-#include <slam3d/Solver.hpp>
+#include <slam3d/core/Mapper.hpp>
+#include <slam3d/sensor/pcl/PointCloudSensor.hpp>
 
-#include <envire/maps/MLSGrid.hpp>
-#include <envire/maps/Pointcloud.hpp>
+#include <envire_core/items/Item.hpp>
+#include <maps/grid/MLSMap.hpp>
 
 #include <queue>
 #include <boost/thread/shared_mutex.hpp>
@@ -49,11 +48,13 @@ namespace slam3d
 		// Members
 		slam3d::Clock* mClock;
 		slam3d::Logger* mLogger;
-		slam3d::GraphMapper* mMapper;
+		slam3d::Graph* mGraph;
+		slam3d::Mapper* mMapper;
 		slam3d::PointCloudSensor* mPclSensor;
 		slam3d::Solver* mSolver;
 		RockOdometry* mOdometry;
 		boost::shared_mutex mGraphMutex;
+		boost::shared_mutex mMapMutex;
 
 		std::string mRobotName;
 		std::string mRobotFrame;
@@ -65,12 +66,9 @@ namespace slam3d
 		
 		// Parameters for creation of map-pcl
 		double mScanResolution;
-		bool mUseColorsAsViewpoints;
 
 		// Parameters for creation of MLS
-		envire::Environment mEnvironment;
-		envire::MLSGrid* mMultiLayerMap;
-		envire::Pointcloud* mPointcloud;
+		envire::core::Item<maps::grid::MLSMapKalman> mMultiLayerMap;
 		GridConfiguration mGridConf;
 		
 		// Current state of transformations

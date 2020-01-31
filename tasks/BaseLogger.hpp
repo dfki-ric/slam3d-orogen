@@ -1,7 +1,7 @@
 #ifndef SLAM3D_BASE_LOGGER_HPP
 #define SLAM3D_BASE_LOGGER_HPP
 
-#include <slam3d/Logger.hpp>
+#include <slam3d/core/Logger.hpp>
 
 namespace slam3d
 {
